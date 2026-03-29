@@ -527,7 +527,7 @@
 
       // Submit to Formspree (works cross-domain, no auth required)
       var submitPromise = Promise.resolve();
-      if (FORMSPREE_URL && FORMSPREE_URL !== 'https://formspree.io/f/mlgojlkr') {
+      if (FORMSPREE_URL) {
         submitPromise = fetch(FORMSPREE_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },

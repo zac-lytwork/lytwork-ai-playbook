@@ -452,6 +452,10 @@
             <label for="name">First Name</label>
             <input type="text" id="name" name="name" placeholder="Your first name" autocomplete="given-name">
           </div>
+          <div class="form-group">
+            <label for="phone">Phone Number</label>
+            <input type="tel" id="phone" name="phone" placeholder="04XXXXXXXX" autocomplete="tel">
+          </div>
           <button type="submit" class="btn-primary" id="submitBtn">
             <span id="btnText">Get Free Access</span>
             <span class="arrow" id="btnArrow">&#8594;</span>
@@ -518,6 +522,7 @@
 
       var email = document.getElementById('email').value.trim();
       var name  = document.getElementById('name').value.trim();
+      var phone = document.getElementById('phone').value.trim();
       if (!email) return;
 
       // Loading state
@@ -525,23 +530,33 @@
       document.getElementById('btnArrow').innerHTML = '<span class="spinner"></span>';
       document.getElementById('submitBtn').disabled = true;
 
-      // Submit to Formspree (works cross-domain, no auth required)
-      var submitPromise = Promise.resolve();
+      var GHL_WEBHOOK_URL = 'https://services.leadconnectorhq.com/hooks/g8JJIhhtZ42k4KaeqKch/webhook-trigger/c512dfb8-86d0-42cd-a828-5a69d9b9a072';
+
+      var payload = {
+        email: email,
+        name:  name,
+        phone: phone,
+        timestamp: new Date().toISOString(),
+        source: window.location.hostname
+      };
+
+      // Submit to Formspree and GHL in parallel
+      var formspreePromise = Promise.resolve();
       if (FORMSPREE_URL) {
-        submitPromise = fetch(FORMSPREE_URL, {
+        formspreePromise = fetch(FORMSPREE_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-          body: JSON.stringify({
-            email: email,
-            name:  name,
-            _subject: 'New Playbook Lead: ' + email,
-            timestamp: new Date().toISOString(),
-            source: window.location.hostname
-          })
-        }).catch(function() {
-          // Silent fail — never block the user redirect
-        });
+          body: JSON.stringify(Object.assign({}, payload, { _subject: 'New Playbook Lead: ' + email }))
+        }).catch(function() {});
       }
+
+      var ghlPromise = fetch(GHL_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(function() {});
+
+      var submitPromise = Promise.all([formspreePromise, ghlPromise]);
 
       // Grant access via cookie (30 days)
       var expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toUTCString();
